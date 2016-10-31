@@ -18,6 +18,7 @@ import com.google.gson.annotations.SerializedName;
 import com.google.gson.internal.LinkedTreeMap;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 
 /**
@@ -42,6 +43,24 @@ class Service
     private transient String mNodeIdentifier = null;
 
     private transient Object mParameters = null;
+
+    private transient Long mInvokeValidFrom = 9999999999L;
+
+    private transient Long mInvokeValidTo = 0L;
+
+    private transient Long mReceiveValidFrom = 9999999999L;
+
+    private transient Long mReceiveValidTo = 0L;
+
+    private static final Integer NO_VALIDITY_SET        = 0,
+                                 INVOKE_VALID_FROM_SET  = 1,
+                                 INVOKE_VALID_TO_SET    = 2,
+                                 RECEIVE_VALID_FROM_SET = 4,
+                                 RECEIVE_VALID_TO_SET   = 8,
+                                 ALL_VALIDITY_SET       = 15;
+
+    private transient Integer mValiditySet = NO_VALIDITY_SET;
+
 
     @SerializedName("timeout")
     private Long mTimeout;
@@ -237,6 +256,43 @@ class Service
      */
     void setTimeout(Long timeout) {
         mTimeout = timeout;
+    }
+
+    public void setInvokeValidFrom(Long invokeValidFrom) {
+        if (mInvokeValidFrom > invokeValidFrom || ((mValiditySet & INVOKE_VALID_FROM_SET) != INVOKE_VALID_FROM_SET)) {
+            mInvokeValidFrom = invokeValidFrom;
+            mValiditySet |= INVOKE_VALID_FROM_SET;
+        }
+    }
+
+    public void setInvokeValidTo(Long invokeValidTo) {
+        if (mInvokeValidTo < invokeValidTo || ((mValiditySet & INVOKE_VALID_TO_SET) != INVOKE_VALID_TO_SET)) {
+            mInvokeValidTo = invokeValidTo;
+            mValiditySet |= INVOKE_VALID_TO_SET;
+        }
+    }
+
+    public void setReceiveValidFrom(Long receiveValidFrom) {
+        if (mReceiveValidFrom > receiveValidFrom || ((mValiditySet & RECEIVE_VALID_FROM_SET) != RECEIVE_VALID_FROM_SET)) {
+            mReceiveValidFrom = receiveValidFrom;
+            mValiditySet |= RECEIVE_VALID_FROM_SET;
+        }
+    }
+
+    public void setReceiveValidTo(Long receiveValidTo) {
+        if (mReceiveValidTo < receiveValidTo || ((mValiditySet & RECEIVE_VALID_TO_SET) != RECEIVE_VALID_TO_SET)) {
+            mReceiveValidTo = receiveValidTo;
+            mValiditySet |= RECEIVE_VALID_TO_SET;
+        }
+    }
+
+    boolean isWithinValidityWindow() {
+        if ((mValiditySet & RECEIVE_VALID_TO_SET) != RECEIVE_VALID_TO_SET) return false;
+
+        Calendar calendar = Calendar.getInstance();
+        int seconds = calendar.get(Calendar.SECOND);
+
+        return (seconds > Math.max(mInvokeValidFrom, mReceiveValidFrom) || seconds < Math.min(mInvokeValidTo, mReceiveValidTo));
     }
 
     public Service copy() {

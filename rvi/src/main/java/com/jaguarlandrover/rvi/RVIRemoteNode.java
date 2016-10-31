@@ -17,6 +17,7 @@ package com.jaguarlandrover.rvi;
 import android.content.Context;
 import android.util.Log;
 
+import java.lang.reflect.Array;
 import java.security.cert.Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -438,24 +439,44 @@ public class RVIRemoteNode implements RVILocalNode.LocalNodeListener
         }
     }
 
+    private ArrayList<Service> deepCopy(ArrayList<Service> services) {
+        if (services == null) return null;
+
+        ArrayList<Service> copied = new ArrayList<>();
+        for (Service service : services)
+            copied.add(service.copy());
+
+        return copied;
+    }
+
     private void sortThroughLocalServices() {
         Log.d(TAG, "Sorting through local service list...");
 
-        ArrayList<Service> allLocalServices = RVILocalNode.getLocalServices();
+        ArrayList<Service> allLocalServices = deepCopy(RVILocalNode.getLocalServices());
         ArrayList<Service> authorizedToReceive = new ArrayList<>();
         ArrayList<Service> authorizedLocalServices = new ArrayList<>();
 
-        for (Credential credential : mValidLocalCredentials) {
-            for (Service service : allLocalServices) {
-                if (credential.grantsRightToReceive(service.getFullyQualifiedServiceIdentifier()))
-                    authorizedToReceive.add(service);
+        for (Service service : allLocalServices) {
+            for (Credential credential : mValidLocalCredentials) {
+                if (credential.grantsRightToReceive(service.getFullyQualifiedServiceIdentifier())) {
+                    service.setReceiveValidFrom(credential.getValidity().getStart());
+                    service.setReceiveValidTo(credential.getValidity().getStop());
+
+                    if (!authorizedToReceive.contains(service))
+                        authorizedToReceive.add(service);
+                }
             }
         }
 
-        for (Credential credential : mValidRemoteCredentials) {
-            for (Service service : authorizedToReceive) {
-                if (credential.grantsRightToInvoke(service.getFullyQualifiedServiceIdentifier()))
-                    authorizedLocalServices.add(service);
+        for (Service service : authorizedToReceive) {
+            for (Credential credential : mValidRemoteCredentials) {
+                if (credential.grantsRightToInvoke(service.getFullyQualifiedServiceIdentifier())) {
+                    service.setInvokeValidFrom(credential.getValidity().getStart());
+                    service.setInvokeValidTo(credential.getValidity().getStop());
+
+                    if (!authorizedLocalServices.contains(service))
+                        authorizedLocalServices.add(service.copy());
+                }
             }
         }
 

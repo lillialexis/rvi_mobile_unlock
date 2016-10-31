@@ -83,22 +83,14 @@ class Credential {
 
             DefaultClaims claims = (DefaultClaims) Jwts.parser().setSigningKey(key).parse(getJwt()).getBody();
 
-            Validity validity =
-                    new Validity((Integer) claims.get("validity", HashMap.class).get("start"),
-                            (Integer) claims.get("validity", HashMap.class).get("stop"));
+            this.mRightToInvoke            = (ArrayList<String>) claims.get("right_to_invoke", ArrayList.class);
+            this.mRightToReceive           = (ArrayList<String>) claims.get("right_to_receive", ArrayList.class);
+            this.mIssuer                   = claims.get("iss", String.class);
+            this.mEncodedDeviceCertificate = claims.get("device_cert", String.class);
+            this.mId                       = claims.get("id", String.class);
 
-            if (!validity.isValid())
-                throw new Exception("Credential dates not valid");
-
-            this.mRightToInvoke            = (ArrayList<String>) claims.get("right_to_invoke", ArrayList.class);  //credentials.getRightToInvoke();
-            this.mRightToReceive           = (ArrayList<String>) claims.get("right_to_receive", ArrayList.class); //credentials.getRightToReceive();
-            this.mIssuer                   = claims.get("iss", String.class);                                     //credentials.getIssuer();
-            this.mEncodedDeviceCertificate = claims.get("device_cert", String.class);                             //credentials.getEncodedDeviceCertificate();
-            this.mId                       = claims.get("id", String.class);                                      //credentials.getId();
-
-            this.mValidity = validity;
-
-            //this.mValidity                 = claims.get("validity", )//credentials.getValidity();
+            this.mValidity = new Validity(Long.valueOf((Integer)claims.get("validity", HashMap.class).get("start")),
+                                        Long.valueOf((Integer)claims.get("validity", HashMap.class).get("stop")));
 
             byte [] decodedDeviceCert = Base64.decode(mEncodedDeviceCertificate, Base64.DEFAULT);
             this.mCertificate = CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(decodedDeviceCert));
@@ -113,10 +105,12 @@ class Credential {
     }
 
     boolean deviceCertificateMatches(Certificate matching) {
-        return mCertificate.equals(matching);
+        return mCertificate != null && mCertificate.equals(matching);
     }
 
     private boolean rightMatchesServiceIdentifier(String right, String serviceIdentifier) {
+        if (right == null || serviceIdentifier == null) return false;
+
         String rightParts[] = right.split("/");
         String serviceParts[] = serviceIdentifier.split("/");
 
@@ -132,6 +126,8 @@ class Credential {
     }
 
     boolean grantsRightToReceive(String fullyQualifiedServiceIdentifier) {
+        if (mRightToReceive == null) return false;
+
         for (String right : mRightToReceive) {
             if (rightMatchesServiceIdentifier(right, fullyQualifiedServiceIdentifier))
                 return true;
@@ -141,6 +137,8 @@ class Credential {
     }
 
     boolean grantsRightToInvoke(String fullyQualifiedServiceIdentifier) {
+        if (mRightToInvoke == null) return false;
+
         for (String right : mRightToInvoke) {
             if (rightMatchesServiceIdentifier(right, fullyQualifiedServiceIdentifier))
                 return true;
@@ -191,26 +189,26 @@ class Credential {
 class Validity {
     private final static String PRETTY_DATE_TIME_FORMATTER = "MM/dd/yyyy h:mm a z";
 
-    private Integer mStart;
+    private Long mStart;
 
-    private Integer mStop;
+    private Long mStop;
 
-    Validity(Integer start, Integer stop) {
+    Validity(Long start, Long stop) {
         mStart = start;
         mStop = stop;
     }
 
-    boolean isValid() {
-        // TODO
+//    boolean isValid() {
+//        // TODO
+//
+//        return true;
+//    }
 
-        return true;
-    }
-
-    public Integer getStart() {
+    Long getStart() {
         return mStart;
     }
 
-    public Integer getStop() {
+    Long getStop() {
         return mStop;
     }
 }
