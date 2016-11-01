@@ -147,16 +147,6 @@ class Credential {
         return false;
     }
 
-//    Boolean isValid(Key serverKey) {
-//        try {
-//            Jwts.parser().setSigningKey(serverKey).parseClaimsJws(getJwt());
-//        } catch (Exception e) {
-//            return false;
-//        }
-//
-//        return true;
-//    }
-
     String getJwt() {
         return mJwt;
     }
@@ -187,8 +177,6 @@ class Credential {
 }
 
 class Validity {
-    private final static String PRETTY_DATE_TIME_FORMATTER = "MM/dd/yyyy h:mm a z";
-
     private Long mStart;
 
     private Long mStop;
@@ -197,12 +185,6 @@ class Validity {
         mStart = start;
         mStop = stop;
     }
-
-//    boolean isValid() {
-//        // TODO
-//
-//        return true;
-//    }
 
     Long getStart() {
         return mStart;
